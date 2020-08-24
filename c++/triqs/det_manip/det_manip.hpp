@@ -551,12 +551,6 @@ namespace triqs {
           return;
         }
 
-        range R1(0, N);
-        //w1.MC(R1) = mat_inv(R1,R1).transpose() * w1.C(R1); //OPTIMIZE BELOW
-        blas::gemv(1.0, mat_inv(R1, R1).transpose(), w1.C(R1), 0.0, w1.MC(R1));
-        w1.MC(N) = -1;
-        w1.MB(N) = -1;
-
         N++;
 
         // keep the real position of the row/col
@@ -568,16 +562,27 @@ namespace triqs {
         for (int_type i = N - 2; i >= int_type(w1.j); i--) col_num[i + 1] = col_num[i];
         col_num[w1.j] = N - 1;
 
-        // Minv is ok, we need to complete
-        w1.ksi = 1 / w1.ksi;
+        // Trigger regneration due to numerical error
+        if (std::abs(w1.ksi) < 1e-3) {
+          regenerate();
+        } else {
+          range R1(0, N - 1);
+          //w1.MC(R1) = mat_inv(R1,R1).transpose() * w1.C(R1); //OPTIMIZE BELOW
+          blas::gemv(1.0, mat_inv(R1, R1).transpose(), w1.C(R1), 0.0, w1.MC(R1));
+          w1.MC(N - 1) = -1;
+          w1.MB(N - 1) = -1;
 
-        // compute the change to the inverse
-        // M += w1.ksi w1.MB w1.MC with BLAS. first put the 0
-        range R(0, N);
-        mat_inv(R, N - 1) = 0;
-        mat_inv(N - 1, R) = 0;
-        //mat_inv(R,R) += w1.ksi* w1.MB(R) * w1.MC(R)// OPTIMIZE BELOW
-        blas::ger(w1.ksi, w1.MB(R), w1.MC(R), mat_inv(R, R));
+          // Minv is ok, we need to complete
+          w1.ksi = 1 / w1.ksi;
+
+          // compute the change to the inverse
+          // M += w1.ksi w1.MB w1.MC with BLAS. first put the 0
+          range R(0, N);
+          mat_inv(R, N - 1) = 0;
+          mat_inv(N - 1, R) = 0;
+          //mat_inv(R,R) += w1.ksi* w1.MB(R) * w1.MC(R)// OPTIMIZE BELOW
+          blas::ger(w1.ksi, w1.MB(R), w1.MC(R), mat_inv(R, R));
+        }
       }
 
       public:
@@ -684,12 +689,6 @@ namespace triqs {
           return;
         }
 
-        range Ri(0, N);
-        //w2.MC(R2,Ri) = w2.C(R2,Ri) * mat_inv(Ri,Ri);// OPTIMIZE BELOW
-        blas::gemm(1.0, w2.C(R2, Ri), mat_inv(Ri, Ri), 0.0, w2.MC(R2, Ri));
-        w2.MC(R2, range(N, N + 2)) = -1; // -identity matrix
-        w2.MB(range(N, N + 2), R2) = -1; // -identity matrix !
-
         // keep the real position of the row/col
         // since we insert a col/row, we have first to push the col at the right
         // and then say that col w2.i[0] is stored in N, the last col.
@@ -701,12 +700,23 @@ namespace triqs {
           for (int_type i = N - 2; i >= int_type(w2.j[k]); i--) col_num[i + 1] = col_num[i];
           col_num[w2.j[k]] = N - 1;
         }
-        w2.ksi = inverse(w2.ksi);
-        range R(0, N);
-        mat_inv(R, range(N - 2, N)) = 0;
-        mat_inv(range(N - 2, N), R) = 0;
-        //mat_inv(R,R) += w2.MB(R,R2) * (w2.ksi * w2.MC(R2,R)); // OPTIMIZE BELOW
-        blas::gemm(1.0, w2.MB(R, R2), (w2.ksi * w2.MC(R2, R)), 1.0, mat_inv(R, R));
+
+        if (std::abs(arrays::determinant(w2.ksi)) < 1e-3) {
+          regenerate();
+        } else {
+          range Ri(0, N - 2);
+          //w2.MC(R2,Ri) = w2.C(R2,Ri) * mat_inv(Ri,Ri);// OPTIMIZE BELOW
+          blas::gemm(1.0, w2.C(R2, Ri), mat_inv(Ri, Ri), 0.0, w2.MC(R2, Ri));
+          w2.MC(R2, range(N - 2, N)) = -1; // -identity matrix
+          w2.MB(range(N - 2, N), R2) = -1; // -identity matrix !
+
+          w2.ksi = inverse(w2.ksi);
+          range R(0, N);
+          mat_inv(R, range(N - 2, N)) = 0;
+          mat_inv(range(N - 2, N), R) = 0;
+          //mat_inv(R,R) += w2.MB(R,R2) * (w2.ksi * w2.MC(R2,R)); // OPTIMIZE BELOW
+          blas::gemm(1.0, w2.MB(R, R2), (w2.ksi * w2.MC(R2, R)), 1.0, mat_inv(R, R));
+        }
       }
 
       public:
@@ -764,14 +774,6 @@ namespace triqs {
 
         N--;
 
-        // M <- a - d^-1 b c with BLAS
-        w1.ksi = -1 / mat_inv(N, N);
-        ASSERT(std::isfinite(std::abs(w1.ksi)));
-        range R(0, N);
-
-        //mat_inv(R,R) += w1.ksi, * mat_inv(R,N) * mat_inv(N,R);
-        blas::ger(w1.ksi, mat_inv(R, N), mat_inv(N, R), mat_inv(R, R));
-
         // modify the permutations
         for (size_t k = w1.i; k < N; k++) { row_num[k] = row_num[k + 1]; }
         for (size_t k = w1.j; k < N; k++) { col_num[k] = col_num[k + 1]; }
@@ -783,6 +785,18 @@ namespace triqs {
         col_num.pop_back();
         x_values.pop_back();
         y_values.pop_back();
+
+        if (std::abs(w1.ksi) < 1e-3) {
+          regenerate();
+        } else {
+          // M <- a - d^-1 b c with BLAS
+          w1.ksi = -1 / mat_inv(N, N);
+          ASSERT(std::isfinite(std::abs(w1.ksi)));
+          range R(0, N);
+
+          //mat_inv(R,R) += w1.ksi, * mat_inv(R,N) * mat_inv(N,R);
+          blas::ger(w1.ksi, mat_inv(R, N), mat_inv(N, R), mat_inv(R, R));
+        }
       }
 
       public:
@@ -869,16 +883,6 @@ namespace triqs {
 
         N -= 2;
 
-        // M <- a - d^-1 b c with BLAS
-        range Rn(0, N), Rl(N, N + 2);
-        //w2.ksi = mat_inv(Rl,Rl);
-        //w2.ksi = inverse( w2.ksi);
-        w2.ksi = inverse(mat_inv(Rl, Rl));
-
-        // write explicitely the second product on ksi for speed ?
-        //mat_inv(Rn,Rn) -= mat_inv(Rn,Rl) * (w2.ksi * mat_inv(Rl,Rn)); // OPTIMIZE BELOW
-        blas::gemm(-1.0, mat_inv(Rn, Rl), w2.ksi * mat_inv(Rl, Rn), 1.0, mat_inv(Rn, Rn));
-
         // modify the permutations
         for (size_t k = w2.i[0]; k < w2.i[1] - 1; k++) row_num[k] = row_num[k + 1];
         for (size_t k = w2.i[1] - 1; k < N; k++) row_num[k] = row_num[k + 2];
@@ -896,6 +900,20 @@ namespace triqs {
           col_num.pop_back();
           x_values.pop_back();
           y_values.pop_back();
+        }
+
+        if (std::abs(arrays::determinant(w2.ksi)) < 1e-3) {
+          regenerate();
+        } else {
+          // M <- a - d^-1 b c with BLAS
+          range Rn(0, N), Rl(N, N + 2);
+          //w2.ksi = mat_inv(Rl,Rl);
+          //w2.ksi = inverse( w2.ksi);
+          w2.ksi = inverse(mat_inv(Rl, Rl));
+
+          // write explicitely the second product on ksi for speed ?
+          //mat_inv(Rn,Rn) -= mat_inv(Rn,Rl) * (w2.ksi * mat_inv(Rl,Rn)); // OPTIMIZE BELOW
+          blas::gemm(-1.0, mat_inv(Rn, Rl), w2.ksi * mat_inv(Rl, Rn), 1.0, mat_inv(Rn, Rn));
         }
       }
       //------------------------------------------------------------------------------------------
