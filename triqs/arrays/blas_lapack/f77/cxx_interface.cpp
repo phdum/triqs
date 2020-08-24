@@ -88,6 +88,15 @@ namespace triqs::arrays::blas::f77 {
 
 namespace triqs::arrays::lapack::f77 {
 
+  void gesvj(const char &joba, const char &jobu, const char &jobv, int m, int n, double *A, int lda, double *SVA, int mv, double *V, int ldv,
+             double *work, int lwork, int &info) {
+    LAPACK_dgesvj(&joba, &jobu, &jobv, &m, &n, A, &lda, SVA, &mv, V, &ldv, work, &lwork, &info);
+  }
+  void gesvj(const char &joba, const char &jobu, const char &jobv, int m, int n, std::complex<double> *A, int lda, double *SVA, int mv,
+             std::complex<double> *V, int ldv, std::complex<double> *cwork, int lwork, double *rwork, int lrwork, int &info) {
+    LAPACK_zgesvj(&joba, &jobu, &jobv, &m, &n, A, &lda, SVA, &mv, V, &ldv, cwork, &lwork, rwork, &lrwork, &info);
+  }
+
   void gelss(int M, int N, int NRHS, double *A, int LDA, double *B, int LDB, double *S, double RCOND, int &RANK, double *WORK, int LWORK, int &INFO) {
     LAPACK_dgelss(&M, &N, &NRHS, A, &LDA, B, &LDB, S, &RCOND, &RANK, WORK, &LWORK, &INFO);
   }

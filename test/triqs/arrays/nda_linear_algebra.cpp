@@ -5,6 +5,7 @@
 #include <triqs/arrays/blas_lapack/stev.hpp>
 #include <triqs/arrays/blas_lapack/gelss.hpp>
 #include <triqs/arrays/blas_lapack/gesvd.hpp>
+#include <triqs/arrays/blas_lapack/gesvj.hpp>
 #include <triqs/arrays/linalg/eigenelements.hpp>
 #include <triqs/utility/numeric_ops.hpp>
 #include <triqs/utility/complex_ops.hpp>
@@ -340,6 +341,39 @@ TEST(blas_lapack, svd) {
 
   EXPECT_ARRAY_NEAR(A, U * S_Mat * VT, 1e-14);
 }
+
+TEST(blas_lapack, svj) { //NOLINT
+
+  // Real
+
+  auto A = matrix<double>{{{1, 1, 1}, {2, 3, 4}, {3, 5, 2}, {4, 2, 5}, {5, 4, 3}}, FORTRAN_LAYOUT};
+  int M  = first_dim(A);
+  int N  = second_dim(A);
+
+  int N_SV = std::min(M, N);
+
+  auto U  = matrix<double>(M, N_SV, FORTRAN_LAYOUT);
+  auto VT = matrix<double>(N_SV, N, FORTRAN_LAYOUT);
+
+  auto S = triqs::arrays::vector<double>(N_SV);
+
+  lapack::gesvj(A, S, U, VT);
+
+  std::cout << A << std::endl;
+  std::cout << S << std::endl;
+  std::cout << U << std::endl;
+  std::cout << VT << std::endl;
+
+
+  auto S_Mat = matrix<double>(N_SV, N_SV);
+  S_Mat()    = 0.0;
+  for (int i : range(N_SV)) S_Mat(i, i) = S(i);
+
+  EXPECT_ARRAY_NEAR(A, U * S_Mat * VT.transpose(), 1e-14);
+
+  std::cout << U * S_Mat * VT.transpose() << std::endl;
+}
+
 
 // ================================================================================
 

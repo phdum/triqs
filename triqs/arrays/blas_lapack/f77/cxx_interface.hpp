@@ -60,6 +60,11 @@ namespace triqs::arrays::blas::f77 {
 
 namespace triqs::arrays::lapack::f77 {
 
+  void gesvj(const char &joba, const char &jobu, const char &jobv, int m, int n, double *A, int lda, double *SVA, int mv, double *V, int ldv,
+             double *work, int lwork, int &info);
+  void gesvj(const char &joba, const char &jobu, const char &jobv, int m, int n, std::complex<double> *A, int lda, double *SVA, int mv,
+             std::complex<double> *V, int ldv, std::complex<double> *cwork, int lwork, double *rwork, int lrwork, int &info);
+             
   void gelss(int M, int N, int NRHS, double *A, int LDA, double *B, int LDB, double *S, double RCOND, int &RANK, double *WORK, int LWORK, int &INFO);
   void gelss(int M, int N, int NRHS, std::complex<double> *A, int LDA, std::complex<double> *B, int LDB, double *S, double RCOND, int &RANK,
              std::complex<double> *WORK, int LWORK, double *RWORK, int &INFO);
