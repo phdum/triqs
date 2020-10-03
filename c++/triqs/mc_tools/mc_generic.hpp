@@ -252,6 +252,9 @@ namespace triqs::mc_tools {
             node_monitor->request_emergency_stop();
           else
             c.abort(2);
+        } catch (...){
+          std::cerr << "mc_generic: Unkown exception occurs on node " << c.rank() << std::endl;
+          c.abort(2);
         }
 
         // recompute fraction done
