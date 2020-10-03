@@ -88,7 +88,7 @@ namespace triqs {
       int sign = 1;
       matrix_type mat_inv;
       uint64_t n_opts                  = 0;   // count the number of operation
-      uint64_t n_opts_max_before_check = 100; // max number of ops before the test of deviation of the det, M^-1 is performed.
+      uint64_t n_opts_max_before_check = std::numeric_limits<uint64_t>::max(); // max number of ops before the test of deviation of the det, M^-1 is performed.
       double singular_threshold = -1; // the test to see if the matrix is singular is abs(det) > singular_threshold. If <0, it is !isnormal(abs(det))
       double precision_warning  = 1.e-8; // bound for warning message in check for singular matrix
       double precision_error    = 1.e-5; // bound for throwing error in check for singular matrix
@@ -264,7 +264,7 @@ namespace triqs {
       double get_n_operations_before_check() const { return n_opts_max_before_check; }
 
       /// Sets the number of operations done before a check in the dets.
-      void set_n_operations_before_check(uint64_t n) { n_opts_max_before_check = n; }
+      void set_n_operations_before_check(uint64_t n) { n_opts_max_before_check = n; n_opts_max_before_check = std::numeric_limits<uint64_t>::max();; }
 
       /// Get the bound for warning messages in the singular tests
       double get_precision_warning() const { return precision_warning; }
@@ -563,7 +563,7 @@ namespace triqs {
         col_num[w1.j] = N - 1;
 
         // Trigger regneration due to numerical error
-        if (std::abs(w1.ksi) < 1e-3) {
+        if (true) {//(std::abs(w1.ksi) < 1e-3) {
           regenerate();
         } else {
           range R1(0, N - 1);
@@ -701,7 +701,7 @@ namespace triqs {
           col_num[w2.j[k]] = N - 1;
         }
 
-        if (std::abs(arrays::determinant(w2.ksi)) < 1e-3) {
+        if (true) {//(std::abs(arrays::determinant(w2.ksi)) < 1e-3) {
           regenerate();
         } else {
           range Ri(0, N - 2);
@@ -786,7 +786,7 @@ namespace triqs {
         x_values.pop_back();
         y_values.pop_back();
 
-        if (std::abs(w1.ksi) < 1e-3) {
+        if (true) {//(std::abs(w1.ksi) < 1e-3) {
           regenerate();
         } else {
           // M <- a - d^-1 b c with BLAS
@@ -902,7 +902,7 @@ namespace triqs {
           y_values.pop_back();
         }
 
-        if (std::abs(arrays::determinant(w2.ksi)) < 1e-3) {
+        if (true) {//(std::abs(arrays::determinant(w2.ksi)) < 1e-3) {
           regenerate();
         } else {
           // M <- a - d^-1 b c with BLAS
@@ -1242,7 +1242,7 @@ namespace triqs {
         det  = newdet;
         sign = newsign;
         ++n_opts;
-        if (n_opts > n_opts_max_before_check) check_mat_inv();
+        // if (n_opts > n_opts_max_before_check) check_mat_inv();
         last_try = NoTry;
       }
 
